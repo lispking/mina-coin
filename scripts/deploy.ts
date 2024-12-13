@@ -15,7 +15,7 @@ import {
     UInt64,
     UInt32,
 } from 'o1js';
-import { CrowdFunding } from '../src/index.js';
+import { CrowdFunding, DogeToken } from '../src/index.js';
 
 const SECRET_KEY = process.env.SECRET_KEY;
 if (!SECRET_KEY) {
@@ -36,16 +36,39 @@ console.log(`Deploy wallet Address: ${deployer.toBase58()}`);
 console.log(`Wallet Nonce: ${deployerAccount.account?.nonce}`);
 console.log(`Wallet Balance: ${deployerAccount.account?.balance}`);
 
+console.time('Compile DogeToken');
+await DogeToken.compile();
+console.timeEnd('Compile DogeToken');
+
+console.time('Deploy DogeToken');
+let dogeTokenKey = PrivateKey.random();
+let dogeTokenAccount = dogeTokenKey.toPublicKey();
+let dogeToken = new DogeToken(dogeTokenAccount);
+let dogeTokenId = dogeToken.deriveTokenId();
+
+let tx = await Mina.transaction({
+    sender: deployer,
+    fee: 0.2 * 1e9,
+    memo: 'Deploy',
+}, async () => {
+    AccountUpdate.fundNewAccount(deployer, 2);
+    await dogeToken.deploy();
+});
+await tx.prove();
+await tx.sign([deployerKey, dogeTokenKey]).send().wait();
+console.timeEnd('Deploy DogeToken');
+
+
 console.time('Compile CrowdFunding');
 await CrowdFunding.compile();
 console.timeEnd('Compile CrowdFunding');
 
 let zkAppKey = PrivateKey.random();
 let zkAppAccount = zkAppKey.toPublicKey();
-let zkApp = new CrowdFunding(zkAppAccount);
+let zkApp = new CrowdFunding(zkAppAccount, dogeTokenId);
 
-console.time('Deploy');
-let tx = await Mina.transaction({
+console.time('Deploy CrowdFunding');
+tx = await Mina.transaction({
     sender: deployer,
     fee: 0.2 * 1e9,
     memo: 'Deploy',
@@ -54,18 +77,30 @@ let tx = await Mina.transaction({
     await zkApp.deploy({
         verificationKey: undefined,
         deadline: UInt32.from(1000000),
-        minimumInvestment: UInt64.from(1e9),
         hardCap: UInt64.from(10e9),
+        fixedPrice: UInt64.from(1e9),
     });
 });
 await tx.prove();
 await tx.sign([deployerKey, zkAppKey]).send().wait();
-console.timeEnd('Deploy');
+console.timeEnd('Deploy CrowdFunding');
 
 await fetchAccount({ publicKey: zkAppAccount });
 console.log(`zkApp Address: ${zkAppAccount.toBase58()}`);
 console.log(`zkApp deadline: ${zkApp.getDeadline().toString()}`);
-console.log(`zkApp minimumInvestment: ${zkApp.getMinimumInvestment().toString()}`);
 console.log(`zkApp hardCap: ${zkApp.getHardCap().toString()}`);
+console.log(`zkApp fixedPrice: ${zkApp.getFixedPrice().toString()}`);
 console.log(`zkApp investors: ${zkApp.getInvestor().toBase58()}`);
 console.log(`zkApp balance: ${zkApp.account.balance.get().toString()}`);
+
+console.time('Transfer token to zkApp');
+const transferAmount = zkApp.getHardCap();
+tx = await Mina.transaction(deployer, async () => {
+    await dogeToken.transfer(deployer, zkAppAccount, transferAmount);
+});
+await tx.prove();
+await tx.sign([deployerKey, dogeTokenKey]).send().wait();
+console.timeEnd('Transfer token to zkApp');
+
+await fetchAccount({ publicKey: zkAppAccount });
+console.log(`after transfer, zkApp balance: ${zkApp.account.balance.get().toString()}`);
