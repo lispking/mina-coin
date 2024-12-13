@@ -133,5 +133,16 @@ describe('CrowdFunding', () => {
     const afterWithdrawBalance = Mina.getBalance(deployerAccount);
     expect(beforeWithdrawBalance.add(MINA.mul(2))).toEqual(afterWithdrawBalance);
     expect(crowdFunding.getBalance()).toEqual(UInt64.from(0));
+
+    const tokenRemain = crowdFunding.getBalance(tokenId);
+    txn = await Mina.transaction(deployerAccount, async () => {
+      AccountUpdate.fundNewAccount(deployerAccount);
+      await crowdFunding.withdrawToken();
+      await token.approveAccountUpdate(crowdFunding.self);
+    });
+    await txn.prove();
+    await txn.sign([deployerKey, crowdFundingKey]).send().wait();
+    const afterWithdrawTokenBalance = Mina.getBalance(deployerAccount, tokenId);
+    expect(afterWithdrawTokenBalance).toEqual(tokenRemain);
   });
 });

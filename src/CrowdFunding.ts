@@ -20,6 +20,12 @@ export class WithdrawnEvent extends Struct({
   timestamp: UInt32,
 }){}
 
+export class WithdrawnTokenEvent extends Struct({
+  who: PublicKey,
+  amount: UInt64,
+  timestamp: UInt32,
+}){}
+
 /**
  * CrowdFunding smart contract
  * See https://docs.minaprotocol.com/zkapps for more info.
@@ -35,6 +41,7 @@ export class CrowdFunding extends SmartContract {
     Deploy: DeployEvent,
     Contributed: ContributedEvent,
     Withdrawn: WithdrawnEvent,
+    WithdrawnToken: WithdrawnTokenEvent,
   }
 
   async deploy(args: DeployArgs & {
@@ -85,11 +92,25 @@ export class CrowdFunding extends SmartContract {
   @method async withdraw() {
     const sender = this.ensureWithdrawal();
 
-    let contractUpdate = AccountUpdate.createSigned(this.address);
+    const contractUpdate = AccountUpdate.createSigned(this.address);
     const amount = contractUpdate.account.balance.getAndRequireEquals();
     contractUpdate.send({ to: sender, amount: amount });
 
     this.emitEvent('Withdrawn', { 
+      who: sender, 
+      amount: amount,
+      timestamp: this.network.blockchainLength.getAndRequireEquals() 
+    });
+  }
+
+  @method async withdrawToken() {
+    const sender = this.ensureWithdrawal();
+
+    const amount = this.account.balance.getAndRequireEquals();
+    const receiverAcctUpt = this.send({ to: sender, amount: amount });
+    receiverAcctUpt.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;// MUST ADD THIS!
+
+    this.emitEvent('WithdrawnToken', { 
       who: sender, 
       amount: amount,
       timestamp: this.network.blockchainLength.getAndRequireEquals() 
