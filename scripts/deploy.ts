@@ -17,7 +17,7 @@ import {
 } from 'o1js';
 import { CrowdFunding, DogeToken } from '../src/index.js';
 
-const logFile = fs.openSync(resolve(projectRoot, 'deploy.log'), 'w');
+const logFile = fs.openSync(resolve(projectRoot, 'deploy.log'), 'a');
 const print = (args: any) => {
     console.log(`[${new Date().toISOString()}] ${args}`);
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${args}\n`);
@@ -28,7 +28,7 @@ if (!SECRET_KEY) {
     throw new Error("SECRET_KEY env not found");
 }
 
-print('Start deploy');
+print('>>> Start deploy');
 
 console.time('Deploy');
 const network = Mina.Network({
@@ -112,4 +112,4 @@ await tx.sign([dogeTokenKey, deployerKey]).send().wait();
 console.timeEnd('Transfer token to zkApp');
 
 console.timeEnd('Deploy');
-print('Deploy done');
+print('>>> Deploy done');
