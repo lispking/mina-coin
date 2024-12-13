@@ -22,6 +22,7 @@
     "testw": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "deploy": "yarn build && node --experimental-vm-modules build/scripts/deploy.js",
     "query": "yarn build && node --experimental-vm-modules build/scripts/query.js",
+    "transfer": "yarn build && node --experimental-vm-modules build/scripts/transfer.js",
     "lint": "npx eslint src/* --fix"
   },
   "devDependencies": {
