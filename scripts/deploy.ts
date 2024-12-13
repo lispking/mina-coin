@@ -41,23 +41,21 @@ await DogeToken.compile();
 console.timeEnd('Compile DogeToken');
 
 console.time('Deploy DogeToken');
-let dogeTokenKey = PrivateKey.random();
-let dogeTokenAccount = dogeTokenKey.toPublicKey();
-let dogeToken = new DogeToken(dogeTokenAccount);
+let dogeToken = new DogeToken(deployer);
 let dogeTokenId = dogeToken.deriveTokenId();
-
+console.log(`dogeTokenId: ${dogeTokenId.toString()}`);
+// 3194618938109178703633509405755599016210606495254918318632495624069282707482
 let tx = await Mina.transaction({
     sender: deployer,
-    fee: 0.2 * 1e9,
+    fee: 0.7 * 1e9,
     memo: 'Deploy',
 }, async () => {
     AccountUpdate.fundNewAccount(deployer, 2);
     await dogeToken.deploy();
 });
 await tx.prove();
-await tx.sign([deployerKey, dogeTokenKey]).send().wait();
+await tx.sign([deployerKey]).send().wait();
 console.timeEnd('Deploy DogeToken');
-
 
 console.time('Compile CrowdFunding');
 await CrowdFunding.compile();
@@ -70,7 +68,7 @@ let zkApp = new CrowdFunding(zkAppAccount, dogeTokenId);
 console.time('Deploy CrowdFunding');
 tx = await Mina.transaction({
     sender: deployer,
-    fee: 0.2 * 1e9,
+    fee: 0.7 * 1e9,
     memo: 'Deploy',
 }, async () => {
     AccountUpdate.fundNewAccount(deployer);
@@ -80,6 +78,7 @@ tx = await Mina.transaction({
         hardCap: UInt64.from(10e9),
         fixedPrice: UInt64.from(1e9),
     });
+    await dogeToken.approveAccountUpdate(zkApp.self);
 });
 await tx.prove();
 await tx.sign([deployerKey, zkAppKey]).send().wait();
@@ -99,7 +98,7 @@ tx = await Mina.transaction(deployer, async () => {
     await dogeToken.transfer(deployer, zkAppAccount, transferAmount);
 });
 await tx.prove();
-await tx.sign([deployerKey, dogeTokenKey]).send().wait();
+await tx.sign([deployerKey]).send().wait();
 console.timeEnd('Transfer token to zkApp');
 
 await fetchAccount({ publicKey: zkAppAccount });

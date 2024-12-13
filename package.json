@@ -20,7 +20,7 @@
     "format": "prettier --write --ignore-unknown **/*",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "testw": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "deploy": "node --experimental-vm-modules build/scripts/deploy.js",
+    "deploy": "yarn build && node --experimental-vm-modules build/scripts/deploy.js",
     "lint": "npx eslint src/* --fix"
   },
   "devDependencies": {
