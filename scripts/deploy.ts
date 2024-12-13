@@ -104,7 +104,11 @@ await tx.sign([deployerKey, zkAppKey]).send().wait();
 console.timeEnd('Deploy CrowdFunding');
 
 console.time('Transfer token to zkApp');
-tx = await Mina.transaction(deployer, async () => {
+tx = await Mina.transaction({
+    sender: deployer,
+    fee: 0.2 * 1e9,
+    memo: 'Transfer',
+}, async () => {
     AccountUpdate.fundNewAccount(deployer);
     await dogeToken.transfer(dogeAddress, zkAppAccount, config.hardCap);
 });
