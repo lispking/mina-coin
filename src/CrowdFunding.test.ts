@@ -8,7 +8,6 @@ const DECIMALS = 1e9;
 const MINA = UInt64.from(1e9);
 const fixedPrice = UInt64.from(DECIMALS);
 const hardCap = UInt64.from(10).mul(DECIMALS);
-const minaTokenId = Field(1);
 
 describe('CrowdFunding', () => {
   let deployerAccount: Mina.TestPublicKey,
@@ -29,8 +28,8 @@ describe('CrowdFunding', () => {
 
   beforeAll(async () => {
     if (proofsEnabled) {
-        await CrowdFunding.compile();
-        await DogeToken.compile();
+      await CrowdFunding.compile();
+      await DogeToken.compile();
     }
   });
 
@@ -56,8 +55,8 @@ describe('CrowdFunding', () => {
 
   async function localDeploy() {
     let txn = await Mina.transaction(deployerAccount, async () => {
-        AccountUpdate.fundNewAccount(deployerAccount, 2);
-        await token.deploy();
+      AccountUpdate.fundNewAccount(deployerAccount, 2);
+      await token.deploy();
     });
     await txn.prove();
     await txn.sign([tokenOwnerKey, deployerKey]).send();
@@ -78,7 +77,7 @@ describe('CrowdFunding', () => {
   async function transferToken() {
     const transferAmount = crowdFunding.getHardCap();
     const txn = await Mina.transaction(deployerAccount, async () => {
-        await token.transfer(tokenOwnerAddress, crowdFundingAddress, transferAmount);
+      await token.transfer(tokenOwnerAddress, crowdFundingAddress, transferAmount);
     });
     await txn.prove();
     await txn.sign([tokenOwnerKey, deployerKey]).send();
@@ -99,13 +98,13 @@ describe('CrowdFunding', () => {
     const beforeBalance = Mina.getBalance(user1);
     console.log('before user1 mina balance', beforeBalance.toString());
     let txn = await Mina.transaction(user1, async () => {
-        AccountUpdate.fundNewAccount(user1, 2);
-        await crowdFunding.contribute();
-        await token.approveAccountUpdate(crowdFunding.self);
+      AccountUpdate.fundNewAccount(user1, 2);
+      await crowdFunding.contribute();
+      await token.approveAccountUpdate(crowdFunding.self);
     });
     await txn.prove();
     await txn.sign([user1Key, crowdFundingKey]).send().wait();
-    expect(crowdFunding.getBalance(minaTokenId)).toEqual(MINA);
+    expect(crowdFunding.getBalance()).toEqual(MINA);
     expect(Mina.getBalance(user1, tokenId)).toEqual(fixedPrice);
     expect(crowdFunding.getSoldAmount().toString()).toEqual(fixedPrice.toString());
 
@@ -114,12 +113,25 @@ describe('CrowdFunding', () => {
     expect(beforeBalance.sub(afterBalance).sub(UInt64.from(2).mul(DECIMALS))).toEqual(fixedPrice);
 
     txn = await Mina.transaction(user1, async () => {
-        await crowdFunding.contribute();
-        await token.approveAccountUpdate(crowdFunding.self);
+      await crowdFunding.contribute();
+      await token.approveAccountUpdate(crowdFunding.self);
     });
     await txn.prove();
     await txn.sign([user1Key, crowdFundingKey]).send().wait();
     expect(Mina.getBalance(user1, tokenId)).toEqual(fixedPrice.mul(2));
-    expect(crowdFunding.getBalance(minaTokenId)).toEqual(MINA.mul(2));
+    expect(crowdFunding.getBalance()).toEqual(MINA.mul(2));
+
+    Local.setBlockchainLength(UInt64.from(100));
+
+    const beforeWithdrawBalance = Mina.getBalance(deployerAccount);
+    txn = await Mina.transaction(deployerAccount, async () => {
+      await crowdFunding.withdraw();
+      await token.approveAccountUpdate(crowdFunding.self);
+    });
+    await txn.prove();
+    await txn.sign([deployerKey, crowdFundingKey]).send().wait();
+    const afterWithdrawBalance = Mina.getBalance(deployerAccount);
+    expect(beforeWithdrawBalance.add(MINA.mul(2))).toEqual(afterWithdrawBalance);
+    expect(crowdFunding.getBalance()).toEqual(UInt64.from(0));
   });
 });

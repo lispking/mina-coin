@@ -1,4 +1,4 @@
-import { SmartContract, state, State, PublicKey, UInt64, DeployArgs, Permissions, method, UInt32, AccountUpdate, Provable, Struct, Field } from 'o1js';
+import { SmartContract, state, State, PublicKey, UInt64, DeployArgs, Permissions, method, UInt32, AccountUpdate, Struct, Field } from 'o1js';
 
 export class DeployEvent extends Struct({
   who: PublicKey,
@@ -25,7 +25,7 @@ export class WithdrawnEvent extends Struct({
  * See https://docs.minaprotocol.com/zkapps for more info.
  */
 export class CrowdFunding extends SmartContract {
-  @state(PublicKey) investor = State<PublicKey>();
+  @state(PublicKey) owner = State<PublicKey>();
   @state(UInt32) deadline = State<UInt32>();
   @state(UInt64) hardCap = State<UInt64>();
   @state(UInt64) fixedPrice = State<UInt64>();
@@ -45,13 +45,13 @@ export class CrowdFunding extends SmartContract {
     await super.deploy(args);
     this.account.permissions.set({
       ...Permissions.default(),
-      send: Permissions.proof(),
+      send: Permissions.proofOrSignature(),
       setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),
       setPermissions: Permissions.impossible(),
     });
   
     const sender = this.sender.getAndRequireSignature();
-    this.investor.set(sender);
+    this.owner.set(sender);
     this.deadline.set(args.deadline);
     this.hardCap.set(args.hardCap);
     this.fixedPrice.set(args.fixedPrice);
@@ -82,12 +82,26 @@ export class CrowdFunding extends SmartContract {
     });
   }
 
+  @method async withdraw() {
+    const sender = this.ensureWithdrawal();
+
+    let contractUpdate = AccountUpdate.createSigned(this.address);
+    const amount = contractUpdate.account.balance.getAndRequireEquals();
+    contractUpdate.send({ to: sender, amount: amount });
+
+    this.emitEvent('Withdrawn', { 
+      who: sender, 
+      amount: amount,
+      timestamp: this.network.blockchainLength.getAndRequireEquals() 
+    });
+  }
+
   ensureContribution(sender: PublicKey): UInt64 {
     const currentTime = this.network.blockchainLength.getAndRequireEquals();
     const deadline = this.deadline.getAndRequireEquals();
     currentTime.assertLessThanOrEqual(deadline, "Deadline reached");
 
-    const investor = this.investor.getAndRequireEquals();
+    const investor = this.owner.getAndRequireEquals();
     sender.equals(investor).assertFalse("Investor cannot contribute");
 
     const hardCap = this.hardCap.getAndRequireEquals();
@@ -99,13 +113,24 @@ export class CrowdFunding extends SmartContract {
     return fixedPrice;
   }
 
-  getBalance(tokenId: Field) {
+  ensureWithdrawal(): PublicKey {
+    const sender = this.sender.getAndRequireSignature();
+    const investor = this.owner.getAndRequireEquals();
+    sender.equals(investor).assertTrue("Only investor can withdraw");
+
+    const currentTime = this.network.blockchainLength.getAndRequireEquals();
+    const deadline = this.deadline.getAndRequireEquals();
+    currentTime.assertGreaterThanOrEqual(deadline, "Deadline not reached");
+    return sender;
+  }
+
+  getBalance(tokenId?: Field) {
     const senderUpdate = AccountUpdate.create(this.address, tokenId);
     return senderUpdate.account.balance.get();
   }
 
   getInvestor() {
-    return this.investor.get();
+    return this.owner.get();
   }
 
   getDeadline() {
