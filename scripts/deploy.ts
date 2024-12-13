@@ -21,6 +21,12 @@ const SECRET_KEY = process.env.SECRET_KEY;
 if (!SECRET_KEY) {
     throw new Error("SECRET_KEY env not found");
 }
+
+const DOGE_SECRET_KEY = process.env.DOGE_SECRET_KEY;
+if (!DOGE_SECRET_KEY) {
+    throw new Error("DOGE_SECRET_KEY env not found");
+}
+
 const network = Mina.Network({
     mina: 'https://api.minascan.io/node/devnet/v1/graphql/',
     archive: 'https://api.minascan.io/archive/devnet/v1/graphql/'
@@ -41,10 +47,12 @@ await DogeToken.compile();
 console.timeEnd('Compile DogeToken');
 
 console.time('Deploy DogeToken');
-let dogeToken = new DogeToken(deployer);
+let dogeTokenKey = PrivateKey.fromBase58(DOGE_SECRET_KEY);
+let dogeAddress = dogeTokenKey.toPublicKey();
+let dogeToken = new DogeToken(dogeAddress);
 let dogeTokenId = dogeToken.deriveTokenId();
 console.log(`dogeTokenId: ${dogeTokenId.toString()}`);
-// 3194618938109178703633509405755599016210606495254918318632495624069282707482
+// 13025822061023983716842879187814933605361911848261190521907601584977159865354
 let tx = await Mina.transaction({
     sender: deployer,
     fee: 0.7 * 1e9,
@@ -54,7 +62,7 @@ let tx = await Mina.transaction({
     await dogeToken.deploy();
 });
 await tx.prove();
-await tx.sign([deployerKey]).send().wait();
+await tx.sign([deployerKey, dogeTokenKey]).send().wait();
 console.timeEnd('Deploy DogeToken');
 
 console.time('Compile CrowdFunding');
@@ -95,10 +103,10 @@ console.log(`zkApp balance: ${zkApp.account.balance.get().toString()}`);
 console.time('Transfer token to zkApp');
 const transferAmount = zkApp.getHardCap();
 tx = await Mina.transaction(deployer, async () => {
-    await dogeToken.transfer(deployer, zkAppAccount, transferAmount);
+    await dogeToken.transfer(dogeAddress, zkAppAccount, transferAmount);
 });
 await tx.prove();
-await tx.sign([deployerKey]).send().wait();
+await tx.sign([dogeTokenKey, deployerKey]).send().wait();
 console.timeEnd('Transfer token to zkApp');
 
 await fetchAccount({ publicKey: zkAppAccount });
