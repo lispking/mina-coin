@@ -74,13 +74,13 @@ const zkAppAccount = zkAppKey.toPublicKey();
 print(`zkAppAccount: ${zkAppAccount.toBase58()}`);
 
 console.time('Transfer token to zkApp');
-const transferAmt = new UInt64(100);
+const transferAmt = config.hardCap;
 const tx = await Mina.transaction({
     sender: deployer,
     fee: 0.2 * 1e9,
     memo: 'Transfer',
 }, async () => {
-    AccountUpdate.fundNewAccount(deployer);
+    // AccountUpdate.fundNewAccount(deployer);
     await dogeToken.transfer(dogeAddress, zkAppAccount, transferAmt);
 });
 await tx.prove();

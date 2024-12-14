@@ -11,13 +11,13 @@ export class DogeToken extends TokenContract {
     this.account.tokenSymbol.set('DOGE');
 
     // make account non-upgradable forever
-    this.account.permissions.set({
-      ...Permissions.default(),
-      setVerificationKey:
-        Permissions.VerificationKey.impossibleDuringCurrentVersion(),
-      setPermissions: Permissions.impossible(),
-      access: Permissions.proofOrSignature(),
-    });
+    // this.account.permissions.set({
+    //   ...Permissions.default()
+    //   setVerificationKey:
+    //     Permissions.VerificationKey.impossibleDuringCurrentVersion(),
+    //   setPermissions: Permissions.impossible(),
+    //   access: Permissions.proofOrSignature(),
+    // });
   }
 
   @method async init() {

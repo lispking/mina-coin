@@ -109,7 +109,7 @@ tx = await Mina.transaction({
     fee: 0.2 * 1e9,
     memo: 'Transfer',
 }, async () => {
-    AccountUpdate.fundNewAccount(deployer);
+    AccountUpdate.fundNewAccount(deployer, 2);
     await dogeToken.transfer(dogeAddress, zkAppAccount, config.hardCap);
 });
 await tx.prove();
