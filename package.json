@@ -21,6 +21,8 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "testw": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "deploy": "yarn build && node --experimental-vm-modules build/scripts/deploy.js",
+    "deploy:DOGE": "yarn build && node --experimental-vm-modules build/scripts/deployDOGE.js",
+    "deploy:zkApp": "yarn build && node --experimental-vm-modules build/scripts/deployZkApp.js",
     "query": "yarn build && node --experimental-vm-modules build/scripts/query.js",
     "transfer": "yarn build && node --experimental-vm-modules build/scripts/transfer.js",
     "lint": "npx eslint src/* --fix"
