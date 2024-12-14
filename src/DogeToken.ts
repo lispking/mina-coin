@@ -1,4 +1,4 @@
-import { TokenContract, UInt64, method, AccountUpdateForest, Permissions } from "o1js";
+import { TokenContract, UInt64, method, AccountUpdateForest } from "o1js";
 
 const SUPPLY = UInt64.from(10n ** 18n);
 export class DogeToken extends TokenContract {
