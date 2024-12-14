@@ -12,6 +12,7 @@ import {
     fetchAccount,
     UInt32,
     UInt64,
+    AccountUpdate,
 } from 'o1js';
 import { DogeToken } from '../src/index.js';
 
